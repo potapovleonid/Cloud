@@ -1,10 +1,12 @@
-package com.home.des.client;
+package com.home.des.common;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class FileInfo {
+    public static String UP_PATH = "[..]";
+
     private String filename;
     private long size;
 
@@ -19,6 +21,15 @@ public class FileInfo {
         } catch (IOException e) {
             throw new RuntimeException("Ошибка с файлом: " + path.toAbsolutePath().toString());
         }
+    }
+
+    public FileInfo(String filename, long size){
+        this.filename = filename;
+        this.size = size;
+    }
+
+    public boolean isDirectory(){
+        return size == -1L;
     }
 
     public String getFilename() {

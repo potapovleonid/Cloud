@@ -13,8 +13,8 @@
                 </Menu>
             </MenuBar>
 
-            <TextField editable="false"/>
-            <ListView VBox.vgrow="ALWAYS" fx:id="filesListComputer">
+            <TextField fx:id="pathField" editable="false" focusTraversable="false"/>
+            <ListView VBox.vgrow="ALWAYS" fx:id="filesListComputer" onMouseClicked="#filesListComputerClicked">
             </ListView>
             <HBox spacing="5.0">
                 <Button maxWidth="Infinity" text="Copy" HBox.hgrow="ALWAYS"/>
