@@ -1,9 +1,11 @@
 package com.home.des.common;
 
+import java.io.Serializable;
+
 //будем кидать в обе стороны, нужно подумать как реализовать запрос на INFO
-public class FileRequest {
-    enum Command {
-        DOWNLOAD, UPLOAD, INFO
+public class FileRequest implements Serializable {
+    public enum Command {
+        DOWNLOAD, UPLOAD, INFO, CONFIRMATE
     }
 
     private String fileName;
@@ -26,4 +28,6 @@ public class FileRequest {
     public Command getCommand() {
         return command;
     }
+
+
 }

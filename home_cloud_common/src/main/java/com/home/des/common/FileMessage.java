@@ -1,16 +1,29 @@
 package com.home.des.common;
 
+import java.io.Serializable;
+import java.util.List;
+
 //будем кидаться классами внутри которых пакеты с данными, надобность в длинне файла отпадает
 //т.к. будет np и tp из них можно будет высчитать когда останавливаться
-public class FileMessage {
-    private byte[] bytes = new byte[8192];
+public class FileMessage implements Serializable {
+    public final static int SIZE_BYTE_BUFFER = 1024 * 1024 * 50;
+    private List<FileInfo> fileInfoList;
+    private byte[] bytes = new byte[SIZE_BYTE_BUFFER];
     private int numberPart;
     private int totalParts;
 
     public FileMessage(byte[] bytes, int numberPart, int totalParts) {
-        this.bytes = bytes.clone();
+        this.bytes = bytes;
         this.numberPart = numberPart;
         this.totalParts = totalParts;
+    }
+
+    public FileMessage(List<FileInfo> fileInfoList) {
+        this.fileInfoList = fileInfoList;
+    }
+
+    public List<FileInfo> getFileInfoList() {
+        return fileInfoList;
     }
 
     public byte[] getBytes() {
@@ -24,4 +37,13 @@ public class FileMessage {
     public int getTotalParts() {
         return totalParts;
     }
+
+    public void setBytes(byte[] bytes) {
+        this.bytes = bytes;
+    }
+
+    public void setNumberPart(int numberPart) {
+        this.numberPart = numberPart;
+    }
+
 }

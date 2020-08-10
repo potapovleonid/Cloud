@@ -27,8 +27,10 @@
             </HBox>
         </VBox>
         <VBox HBox.hgrow="ALWAYS">
-            <ListView VBox.vgrow="ALWAYS" fx:id="filesListServer">
+            <ListView VBox.vgrow="ALWAYS" fx:id="filesListServer" onMouseClicked="#filesListComputerClicked">
             </ListView>
-            <Button maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS"/>
+            <Button maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" onAction="#buttonDownload"/>
+            <Button maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" onAction="#buttonUpdateFileList"/>
+            <Button maxWidth="Infinity" text="Connect" HBox.hgrow="ALWAYS" onAction="#connect_server"/>
         </VBox>
 </HBox>

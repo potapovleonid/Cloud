@@ -1,5 +1,6 @@
 package com.home.des.server;
 
+import com.home.des.common.ConnectionSettings;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -23,14 +24,14 @@ public class Server_Netty {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(
-                            new ObjectDecoder(1024 * 1024 * 1024 * 5, ClassResolvers.cacheDisabled(null)),
+                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
                             new ObjectEncoder(),
                             new MyHandler()
                             );
                             // указываем конвеер обработки
                         }
                     });
-            ChannelFuture future = server.bind(8585).sync();
+            ChannelFuture future = server.bind(ConnectionSettings.PORT).sync();
             future.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
