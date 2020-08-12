@@ -20,7 +20,7 @@
                 <Button maxWidth="Infinity" text="Copy" HBox.hgrow="ALWAYS"/>
                 <Button maxWidth="Infinity" text="Move" HBox.hgrow="ALWAYS"/>
                 <Button maxWidth="Infinity" text="Delete" HBox.hgrow="ALWAYS"/>
-                <Button maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS"/>
+                <Button id="bUpload" maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS" onAction="#buttonUpload"/>
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>
@@ -29,7 +29,7 @@
         <VBox HBox.hgrow="ALWAYS">
             <ListView VBox.vgrow="ALWAYS" fx:id="filesListServer" onMouseClicked="#filesListComputerClicked">
             </ListView>
-            <Button maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" onAction="#buttonDownload"/>
+            <Button id="bDownload" maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" onAction="#buttonDownload"/>
             <Button maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" onAction="#buttonUpdateFileList"/>
             <Button maxWidth="Infinity" text="Connect" HBox.hgrow="ALWAYS" onAction="#connect_server"/>
         </VBox>
