@@ -7,6 +7,7 @@ import io.netty.channel.*;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -18,8 +19,10 @@ import java.util.stream.Collectors;
 
 public class MyHandler extends ChannelInboundHandlerAdapter {
     private ExecutorService executorService;
-    private Thread thread;
     private boolean block = false;
+    private int uploadPart = 0;
+    private FileOutputStream uploadFileStream;
+    private Path pathUploadFile;
 
 
     public MyHandler() {
@@ -75,6 +78,17 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                     // передача
                 }).start();
             }
+            if (((FileRequest) msg).getCommand() == FileRequest.Command.UPLOAD) {
+                pathUploadFile = Paths.get("./server_files/" + ((FileRequest) msg).getFileName());
+                if (!Files.exists(pathUploadFile)) {
+                    Files.createFile(pathUploadFile);
+                } else {
+                    Files.delete(pathUploadFile);
+                    Files.createFile(pathUploadFile);
+                }
+                uploadFileStream = new FileOutputStream(pathUploadFile.toFile());
+                uploadPart++;
+            }
             if (((FileRequest) msg).getCommand() == FileRequest.Command.INFO) {
                 System.out.println("Получен запрос на список файлов");
                 executorService.execute(() -> {
@@ -87,8 +101,25 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                     }
                 });
             }
-            if (((FileRequest) msg).getCommand() == FileRequest.Command.CONFIRMATE) {
+            if (((FileRequest) msg).getCommand() == FileRequest.Command.LOCK_OFF) {
                 block = false;
+            }
+        }
+        if (msg instanceof FileMessage) {
+            if (uploadFileStream != null && uploadPart == ((FileMessage) msg).getNumberPart()) {
+                uploadFileStream.write(((FileMessage) msg).getBytes());
+
+                System.out.println("Принят пакет: " + ((FileMessage) msg).getNumberPart() + "/" + ((FileMessage) msg).getTotalParts());
+                if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
+                    System.out.println("На сервер загружен файл: " + pathUploadFile.toFile().getName());
+                    pathUploadFile = null;
+                    uploadFileStream.close();
+                    uploadPart = 0;
+                }
+                if (((FileMessage) msg).getNumberPart() != ((FileMessage) msg).getTotalParts()) {
+                    ctx.writeAndFlush(new FileRequest(FileRequest.Command.NEXT_FM));
+                    uploadPart++;
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.home.des.server;
 
 import com.home.des.common.ConnectionSettings;
+import com.home.des.common.FileMessage;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -24,7 +25,7 @@ public class Server_Netty {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(
-                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                            new ObjectDecoder((int) (FileMessage.SIZE_BYTE_BUFFER * 1.05), ClassResolvers.cacheDisabled(null)),
                             new ObjectEncoder(),
                             new MyHandler()
                             );

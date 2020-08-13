@@ -7,6 +7,7 @@ import java.util.List;
 //т.к. будет np и tp из них можно будет высчитать когда останавливаться
 public class FileMessage implements Serializable {
     public final static int SIZE_BYTE_BUFFER = 1024 * 1024 * 64;
+//    public final static int SIZE_BYTE_BUFFER = 1024 * 8;
     private List<FileInfo> fileInfoList;
     private byte[] bytes;
     private int numberPart;

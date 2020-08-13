@@ -174,7 +174,7 @@ public class Controller implements Initializable {
     public void connect_server(ActionEvent actionEvent) throws IOException {
         socket = new Socket(ConnectionSettings.HOST, ConnectionSettings.PORT);
         this.ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
-        this.oos = new ObjectEncoderOutputStream(socket.getOutputStream());
+        this.oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
         System.out.println("success connection");
     }
 
@@ -196,7 +196,7 @@ public class Controller implements Initializable {
                     fout.write(fileMessage.getBytes());
 
                     System.out.println("Confrimate part: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
-                    oos.writeObject(new FileRequest(FileRequest.Command.CONFIRMATE));
+                    oos.writeObject(new FileRequest(FileRequest.Command.LOCK_OFF));
                     if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
                         break;
                     }
@@ -209,31 +209,45 @@ public class Controller implements Initializable {
         }).start();
     }
 
-    public void buttonUpload(ActionEvent actionEvent) throws IOException, InterruptedException {
-        if (filesListComputer.getSelectionModel().getSelectedItem() != null) {
-//            System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
-//            File fileUpload = new File(pathField.getText() + "/"
-//                    + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
-////            System.out.println(fileUpload.getAbsoluteFile());
-//            int totalParts = new Long(fileUpload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
-//            if (fileUpload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) totalParts++;
-//            FileMessage fileMessageOut = new FileMessage(new byte[FileMessage.SIZE_BYTE_BUFFER], 0, totalParts);
-//            FileInputStream fis = new FileInputStream(fileUpload);
-//            for (int i = 0; i < totalParts; i++) {
-//                if (!socket.isClosed()){
-//                    int readBytes = fis.read(fileMessageOut.getBytes());
-//                    fileMessageOut.setNumberPart(i+1);
-//                    if (readBytes < FileMessage.SIZE_BYTE_BUFFER){
-//                        fileMessageOut.setBytes(Arrays.copyOfRange(fileMessageOut.getBytes(), 0, readBytes));
-//                    }
-//
-//                }
-//            }
+    public void buttonUpload(ActionEvent actionEvent) throws IOException, InterruptedException, ClassNotFoundException {
+        if (filesListComputer.getSelectionModel().getSelectedItem() != null && socket != null) {
+            System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
+            oos.writeObject(new FileRequest(filesListComputer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.UPLOAD));
+            File fileUpload = new File(pathField.getText() + "/"
+                    + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
+//            System.out.println(fileUpload.getAbsoluteFile());
+            int totalParts = new Long(fileUpload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
+            if (fileUpload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) totalParts++;
+            FileMessage fileMessageOut = new FileMessage(new byte[FileMessage.SIZE_BYTE_BUFFER], 0, totalParts);
+            FileInputStream fis = new FileInputStream(fileUpload);
+            FileRequest next_file;
+            for (int i = 0; i < totalParts; i++) {
+                if (!socket.isClosed()) {
+                    int readBytes = fis.read(fileMessageOut.getBytes());
+                    fileMessageOut.setNumberPart(i + 1);
+                    if (readBytes < FileMessage.SIZE_BYTE_BUFFER) {
+                        fileMessageOut.setBytes(Arrays.copyOfRange(fileMessageOut.getBytes(), 0, readBytes));
+                    }
+                    oos.writeObject(fileMessageOut);
+                    System.out.println("Отправлен пакет: " + (i + 1) + "/" + totalParts);
+                    if (i + 1 < totalParts) {
+                        next_file = (FileRequest) ois.readObject();
+                        if (next_file.getCommand() == FileRequest.Command.NEXT_FM) {
+                            System.out.println("Отправляем следующий пакет");
+                        }
+                        if (next_file.getCommand() == FileRequest.Command.AGAIN) {
+                            oos.writeObject(fileMessageOut);
+                        }
+                    }
+                }
+            }
+            fis.close();
+
 
             //Вот здесь ошика
-            bUpload.setVisible(false);
-            Thread.sleep(10000);
-            bUpload.setVisible(true);
+//            bUpload.setVisible(false);
+//            Thread.sleep(10000);
+//            bUpload.setVisible(true);
         } else System.out.println("Файл не выбран");
     }
 }
