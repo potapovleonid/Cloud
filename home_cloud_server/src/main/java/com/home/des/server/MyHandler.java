@@ -1,5 +1,6 @@
 package com.home.des.server;
 
+import com.home.des.common.ConnectionSettings;
 import com.home.des.common.FileInfo;
 import com.home.des.common.FileMessage;
 import com.home.des.common.FileRequest;
@@ -47,7 +48,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                 System.out.println("Получено сообщение на скачивание: " + ((FileRequest) msg).getFileName());
                 new Thread(() -> {
                     try {
-                        File fileDownload = new File("./server_files/" + ((FileRequest) msg).getFileName());
+                        File fileDownload = new File(ConnectionSettings.destination_server_files.toString() + "/" + ((FileRequest) msg).getFileName());
                         int totalParts = new Long(fileDownload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
                         if (fileDownload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) {
                             totalParts++;
@@ -79,7 +80,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                 }).start();
             }
             if (((FileRequest) msg).getCommand() == FileRequest.Command.UPLOAD) {
-                pathUploadFile = Paths.get("./server_files/" + ((FileRequest) msg).getFileName());
+                pathUploadFile = Paths.get(ConnectionSettings.destination_server_files.toString() + "/" + ((FileRequest) msg).getFileName());
                 if (!Files.exists(pathUploadFile)) {
                     Files.createFile(pathUploadFile);
                 } else {
@@ -94,7 +95,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                 executorService.execute(() -> {
                     ctx.writeAndFlush(new FileRequest(FileRequest.Command.CONFIRMATE));
                     try {
-                        List<FileInfo> infoList = Files.list(Paths.get("./server_files/")).map(FileInfo::new).collect(Collectors.toList());
+                        List<FileInfo> infoList = Files.list(ConnectionSettings.destination_server_files).map(FileInfo::new).collect(Collectors.toList());
                         ctx.writeAndFlush(new FileMessage(infoList));
                     } catch (IOException e) {
                         e.printStackTrace();

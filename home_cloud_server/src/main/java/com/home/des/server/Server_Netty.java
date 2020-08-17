@@ -13,7 +13,10 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
+import java.nio.file.Files;
+
 public class Server_Netty {
+
     public void run() throws Exception{
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -29,15 +32,21 @@ public class Server_Netty {
                             new ObjectEncoder(),
                             new MyHandler()
                             );
-                            // указываем конвеер обработки
                         }
                     });
             ChannelFuture future = server.bind(ConnectionSettings.PORT).sync();
+
+            if (!Files.exists(ConnectionSettings.destination_server_files)){
+                Files.createDirectory(ConnectionSettings.destination_server_files);
+            }
+            System.out.println("Server started");
+
             future.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
+
     }
 
     public static void main(String[] args) throws Exception {

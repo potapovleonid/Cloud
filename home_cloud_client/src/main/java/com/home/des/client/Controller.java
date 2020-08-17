@@ -12,10 +12,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import org.apache.logging.log4j.core.util.Loader;
@@ -46,6 +43,8 @@ public class Controller implements Initializable {
     TextField pathField;
     @FXML
     Button bUpload;
+    @FXML
+    Button bDownload;
 
     public Controller() throws IOException {
     }
@@ -131,8 +130,105 @@ public class Controller implements Initializable {
         }
     }
 
-    //надо разнести отправку листов в отдельный класс
+    public void connect_server(ActionEvent actionEvent) {
+        try {
+            socket = new Socket(ConnectionSettings.HOST, ConnectionSettings.PORT);
+            this.ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
+            this.oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
+            System.out.println("success connection");
+            updateServerFileList();
+            bUpload.setVisible(true);
+            bDownload.setVisible(true);
+        } catch (IOException | ClassNotFoundException e) {
+            Alert connect_server = new Alert(Alert.AlertType.INFORMATION);
+            connect_server.setTitle("Server connection");
+            connect_server.setHeaderText(null);
+            connect_server.setContentText("Не удалось подключится к серверу, попробуйте позже");
+            connect_server.showAndWait();
+        }
+    }
+
     public void buttonUpdateFileList(ActionEvent actionEvent) throws IOException, ClassNotFoundException {
+        updateServerFileList();
+    }
+
+    public void buttonDownload(ActionEvent actionEvent) throws IOException, InterruptedException {
+        Path pathToFile = Paths.get(pathField.getText() + "/" + filesListServer.getSelectionModel().getSelectedItem().getFilename());
+        if (!Files.exists(pathToFile)) {
+            Files.createFile(pathToFile);
+        } else {
+            Files.delete(pathToFile);
+            Files.createFile(pathToFile);
+        }
+        oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
+        new Thread(() -> {
+            try {
+                FileOutputStream fout = new FileOutputStream(pathToFile.toFile());
+                while (true) {
+                    Object msg = ois.readObject();
+                    FileMessage fileMessage = (FileMessage) msg;
+                    fout.write(fileMessage.getBytes());
+
+                    System.out.println("Confrimate part: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
+                    oos.writeObject(new FileRequest(FileRequest.Command.LOCK_OFF));
+                    if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
+                        break;
+                    }
+                }
+                fout.close();
+                System.out.println("Success");
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void buttonUpload(ActionEvent actionEvent) throws IOException, InterruptedException, ClassNotFoundException {
+        if (socket != null) {
+            if (filesListComputer.getSelectionModel().getSelectedItem() != null) {
+                System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
+                oos.writeObject(new FileRequest(filesListComputer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.UPLOAD));
+                File fileUpload = new File(pathField.getText() + "/"
+                        + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
+                //            System.out.println(fileUpload.getAbsoluteFile());
+                int totalParts = new Long(fileUpload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
+                if (fileUpload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) totalParts++;
+                FileMessage fileMessageOut = new FileMessage(new byte[FileMessage.SIZE_BYTE_BUFFER], 0, totalParts);
+                FileInputStream fis = new FileInputStream(fileUpload);
+                FileRequest next_file;
+                for (int i = 0; i < totalParts; i++) {
+                    if (!socket.isClosed()) {
+                        int readBytes = fis.read(fileMessageOut.getBytes());
+                        fileMessageOut.setNumberPart(i + 1);
+                        if (readBytes < FileMessage.SIZE_BYTE_BUFFER) {
+                            fileMessageOut.setBytes(Arrays.copyOfRange(fileMessageOut.getBytes(), 0, readBytes));
+                        }
+                        oos.writeObject(fileMessageOut);
+                        System.out.println("Отправлен пакет: " + (i + 1) + "/" + totalParts);
+                        if (i + 1 < totalParts) {
+                            next_file = (FileRequest) ois.readObject();
+                            if (next_file.getCommand() == FileRequest.Command.NEXT_FM) {
+                                System.out.println("Отправляем следующий пакет");
+                            }
+                            if (next_file.getCommand() == FileRequest.Command.AGAIN) {
+                                oos.writeObject(fileMessageOut);
+                            }
+                        }
+                    }
+                }
+                fis.close();
+                updateServerFileList();
+            } else System.out.println("Файл не выбран");
+        } else {
+            Alert connect_server = new Alert(Alert.AlertType.INFORMATION);
+            connect_server.setTitle("Server connection");
+            connect_server.setHeaderText(null);
+            connect_server.setContentText("Вы не подключились к серверу");
+            connect_server.showAndWait();
+        }
+    }
+
+    private void updateServerFileList() throws IOException, ClassNotFoundException {
         filesListServer.getItems().clear();
         oos.writeObject(new FileRequest(FileRequest.Command.INFO));
         FileRequest fileRequest = (FileRequest) ois.readObject();
@@ -169,85 +265,5 @@ public class Controller implements Initializable {
                 }
             });
         }
-    }
-
-    public void connect_server(ActionEvent actionEvent) throws IOException {
-        socket = new Socket(ConnectionSettings.HOST, ConnectionSettings.PORT);
-        this.ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
-        this.oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
-        System.out.println("success connection");
-    }
-
-    public void buttonDownload(ActionEvent actionEvent) throws IOException, InterruptedException {
-        Path pathToFile = Paths.get(pathField.getText() + "/" + filesListServer.getSelectionModel().getSelectedItem().getFilename());
-        if (!Files.exists(pathToFile)) {
-            Files.createFile(pathToFile);
-        } else {
-            Files.delete(pathToFile);
-            Files.createFile(pathToFile);
-        }
-        oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
-        new Thread(() -> {
-            try {
-                FileOutputStream fout = new FileOutputStream(pathToFile.toFile());
-                while (true) {
-                    Object msg = ois.readObject();
-                    FileMessage fileMessage = (FileMessage) msg;
-                    fout.write(fileMessage.getBytes());
-
-                    System.out.println("Confrimate part: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
-                    oos.writeObject(new FileRequest(FileRequest.Command.LOCK_OFF));
-                    if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
-                        break;
-                    }
-                }
-                fout.close();
-                System.out.println("Success");
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    public void buttonUpload(ActionEvent actionEvent) throws IOException, InterruptedException, ClassNotFoundException {
-        if (filesListComputer.getSelectionModel().getSelectedItem() != null && socket != null) {
-            System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
-            oos.writeObject(new FileRequest(filesListComputer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.UPLOAD));
-            File fileUpload = new File(pathField.getText() + "/"
-                    + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
-//            System.out.println(fileUpload.getAbsoluteFile());
-            int totalParts = new Long(fileUpload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
-            if (fileUpload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) totalParts++;
-            FileMessage fileMessageOut = new FileMessage(new byte[FileMessage.SIZE_BYTE_BUFFER], 0, totalParts);
-            FileInputStream fis = new FileInputStream(fileUpload);
-            FileRequest next_file;
-            for (int i = 0; i < totalParts; i++) {
-                if (!socket.isClosed()) {
-                    int readBytes = fis.read(fileMessageOut.getBytes());
-                    fileMessageOut.setNumberPart(i + 1);
-                    if (readBytes < FileMessage.SIZE_BYTE_BUFFER) {
-                        fileMessageOut.setBytes(Arrays.copyOfRange(fileMessageOut.getBytes(), 0, readBytes));
-                    }
-                    oos.writeObject(fileMessageOut);
-                    System.out.println("Отправлен пакет: " + (i + 1) + "/" + totalParts);
-                    if (i + 1 < totalParts) {
-                        next_file = (FileRequest) ois.readObject();
-                        if (next_file.getCommand() == FileRequest.Command.NEXT_FM) {
-                            System.out.println("Отправляем следующий пакет");
-                        }
-                        if (next_file.getCommand() == FileRequest.Command.AGAIN) {
-                            oos.writeObject(fileMessageOut);
-                        }
-                    }
-                }
-            }
-            fis.close();
-
-
-            //Вот здесь ошика
-//            bUpload.setVisible(false);
-//            Thread.sleep(10000);
-//            bUpload.setVisible(true);
-        } else System.out.println("Файл не выбран");
     }
 }
