@@ -7,24 +7,22 @@ import com.home.des.common.FileRequest;
 import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
 import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
-import javafx.util.Callback;
-import org.apache.logging.log4j.core.util.Loader;
+import javafx.scene.layout.VBox;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
@@ -36,81 +34,124 @@ public class Controller implements Initializable {
     private Socket socket;
 
     @FXML
-    ListView<FileInfo> filesListComputer;
-    @FXML
-    ListView<FileInfo> filesListServer;
-    @FXML
-    TextField pathField;
-    @FXML
     Button bUpload;
     @FXML
     Button bDownload;
+    @FXML
+    Button bConnect;
+    @FXML
+    TableView<FileInfo> filesListComputer;
+    @FXML
+    TableView<FileInfo> filesListServer;
+    @FXML
+    ComboBox<String> disksBox;
+    @FXML
+    TextField pathField;
+    @FXML
+    VBox vBoxFileServer;
 
     public Controller() throws IOException {
     }
 
+    public void settingTable(TableView<FileInfo> tableView){
+        TableColumn<FileInfo, String> fileTypeColumn = new TableColumn<>();
+        fileTypeColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getFileType().getName()));
+        fileTypeColumn.setPrefWidth(30);
+
+        TableColumn<FileInfo, String> fileNameColumn = new TableColumn<>("File name");
+        fileNameColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getFilename()));
+        fileNameColumn.setPrefWidth(240);
+
+        TableColumn<FileInfo, Long> fileSizeColumn = new TableColumn<>("File size");
+        fileSizeColumn.setCellValueFactory(param -> new SimpleObjectProperty<>(param.getValue().getSize()));
+        fileSizeColumn.setPrefWidth(120);
+        fileSizeColumn.setCellFactory(column -> {
+            return new TableCell<FileInfo, Long>() {
+                @Override
+                protected void updateItem(Long item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (item == null || empty) {
+                        setText(null);
+                        setStyle("");
+                    } else {
+                        String str = String.format("%,d bytes", item);
+                        if (item == -1L) {
+                            str = "[DIR]";
+                        }
+                        setText(str);
+                    }
+                }
+            };
+        });
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        TableColumn<FileInfo, String> fileDateColumn = new TableColumn<>("Date modified");
+        fileDateColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getLastModified().format(dtf)));
+        fileDateColumn.setPrefWidth(120);
+
+        tableView.getColumns().addAll(fileTypeColumn, fileNameColumn, fileSizeColumn, fileDateColumn);
+        tableView.getSortOrder().add(fileTypeColumn);
+    }
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        Path files = Paths.get(".idea");
-        filesListComputer.getItems().addAll(scanFiles(files));
-        //тут надо ловить данные с сервака и обновлять список файлов
-//        filesListServer.getItems().addAll("File1", "File2", "File3", "File4", "File5", "File6");
-        filesListComputer.setCellFactory(new Callback<ListView<FileInfo>, ListCell<FileInfo>>() {
+
+        settingTable(filesListComputer);
+        settingTable(filesListServer);
+
+        disksBox.getItems().clear();
+        for (Path p : FileSystems.getDefault().getRootDirectories()) {
+            disksBox.getItems().add(p.toString());
+        }
+        disksBox.getSelectionModel().select(0);
+
+        filesListComputer.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
-            public ListCell<FileInfo> call(ListView<FileInfo> param) {
-                return new ListCell<FileInfo>() {
-                    @Override
-                    protected void updateItem(FileInfo item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item == null || empty) {
-                            setText(null);
-                            setStyle("");
-                        } else {
-                            String formattedFilename = String.format("%-30s", item.getFilename());
-                            String formattedFileSize = String.format("%,d bytes", item.getSize());
-                            if (item.getSize() == -1L) {
-                                formattedFileSize = String.format("%s", "[DIR]");
-                            }
-                            if (item.getSize() == -2L) {
-                                formattedFileSize = "";
-                            }
-                            String text = String.format("%s %-20s", formattedFilename, formattedFileSize);
-                            setText(text);
-                        }
+            public void handle(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    Path selectPath = Paths.get(pathField.getText()).resolve(filesListComputer.getSelectionModel().getSelectedItem().getFilename());
+                    if (Files.isDirectory(selectPath)) {
+                        updateListComputer(selectPath, filesListComputer);
                     }
-                };
+                }
             }
         });
-        goToPath(Paths.get(""));
-        ;
-        //необходимо инициализировать сервер, но сначала передача\скачивание файлов.
+
+        updateListComputer(Paths.get(""), filesListComputer);
     }
 
-    public void goToPath(Path path) {
-        this.root = path;
-        pathField.setText(root.toAbsolutePath().toString());
-        filesListComputer.getItems().clear();
-        filesListComputer.getItems().add(new FileInfo(FileInfo.UP_PATH, -2L));
-        filesListComputer.getItems().addAll(scanFiles(root));
-        filesListComputer.getItems().sort(new Comparator<FileInfo>() {
-            @Override
-            public int compare(FileInfo o1, FileInfo o2) {
-                if (o1.getFilename().equals(FileInfo.UP_PATH)) {
-                    return -1;
-                }
-                if ((int) Math.signum(o1.getSize()) == (int) Math.signum(o2.getSize())) {
-                    return o1.getFilename().compareTo(o2.getFilename());
-                }
-                return new Long(o1.getSize() - o2.getSize()).intValue();
-            }
-        });
-    }
-
-    public List<FileInfo> scanFiles(Path filesPath) {
+    public void updateListComputer(Path path, TableView<FileInfo> tableView) {
         try {
-            return Files.list(filesPath).map(FileInfo::new).collect(Collectors.toList());
+            pathField.setText(path.normalize().toAbsolutePath().toString());
+            tableView.getItems().clear();
+            tableView.getItems().addAll(Files.list(path).map(FileInfo::new).collect(Collectors.toList()));
+            tableView.sort();
         } catch (IOException e) {
-            throw new RuntimeException("Неудачное сканирование файлов: " + filesPath.toAbsolutePath().toString());
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Не удалось обновить список файлов", ButtonType.OK);
+            alert.showAndWait();
+        }
+    }
+
+    public void updateListServer() throws IOException, ClassNotFoundException {
+        if (socket != null) {
+            filesListServer.getItems().clear();
+            oos.writeObject(new FileRequest(FileRequest.Command.INFO));
+            FileRequest fileRequest = (FileRequest) ois.readObject();
+            if (fileRequest.getCommand() == FileRequest.Command.CONFIRMATE) {
+                try {
+                    System.out.println("Сервер подтвердил передачу списка файлов");
+                    Object msg = ois.readObject();
+                    List<FileInfo> fileInfoList = ((FileMessage) msg).getFileInfoList();
+                    System.out.println("Получен список");
+                    filesListServer.getItems().addAll(fileInfoList);
+                } catch (ClassNotFoundException | IOException e) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Не удалось обновить список файлов сервера", ButtonType.OK);
+                    alert.showAndWait();
+                }
+            }
+        } else {
+            alertMessage("Отсутствует подключение к серверу");
+            visibleButtonAndPanel(false);
         }
     }
 
@@ -118,16 +159,20 @@ public class Controller implements Initializable {
         Platform.exit();
     }
 
-    public void filesListComputerClicked(MouseEvent mouseEvent) {
-        if (mouseEvent.getClickCount() == 2) {
-            FileInfo fileInfo = filesListComputer.getSelectionModel().getSelectedItem();
-            if (fileInfo.isDirectory()) {
-                goToPath(root.resolve(fileInfo.getFilename()));
-            }
-            if (fileInfo.getSize() == -2L) {
-                goToPath(root.toAbsolutePath().getParent());
-            }
+    public void visibleButtonAndPanel(boolean boo){
+        if (boo){
+            bConnect.setVisible(!boo);
+            bConnect.setManaged(!boo);
+        } else {
+            bConnect.setVisible(boo);
+            bConnect.setManaged(boo);
         }
+        bUpload.setVisible(boo);
+        bUpload.setManaged(boo);
+        bDownload.setVisible(boo);
+        bDownload.setManaged(boo);
+        vBoxFileServer.setVisible(boo);
+        vBoxFileServer.setManaged(boo);
     }
 
     public void connect_server(ActionEvent actionEvent) {
@@ -136,9 +181,8 @@ public class Controller implements Initializable {
             this.ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
             this.oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
             System.out.println("success connection");
-            updateServerFileList();
-            bUpload.setVisible(true);
-            bDownload.setVisible(true);
+            updateListServer();
+            visibleButtonAndPanel(true);
         } catch (IOException | ClassNotFoundException e) {
             Alert connect_server = new Alert(Alert.AlertType.INFORMATION);
             connect_server.setTitle("Server connection");
@@ -149,38 +193,60 @@ public class Controller implements Initializable {
     }
 
     public void buttonUpdateFileList(ActionEvent actionEvent) throws IOException, ClassNotFoundException {
-        updateServerFileList();
+        updateListServer();
     }
 
-    public void buttonDownload(ActionEvent actionEvent) throws IOException, InterruptedException {
-        Path pathToFile = Paths.get(pathField.getText() + "/" + filesListServer.getSelectionModel().getSelectedItem().getFilename());
-        if (!Files.exists(pathToFile)) {
-            Files.createFile(pathToFile);
-        } else {
-            Files.delete(pathToFile);
-            Files.createFile(pathToFile);
+    public void buttonUp(ActionEvent actionEvent) {
+        Path upperPath = Paths.get(pathField.getText()).getParent();
+        if (upperPath != null) {
+            updateListComputer(upperPath, filesListComputer);
         }
-        oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
-        new Thread(() -> {
-            try {
-                FileOutputStream fout = new FileOutputStream(pathToFile.toFile());
-                while (true) {
-                    Object msg = ois.readObject();
-                    FileMessage fileMessage = (FileMessage) msg;
-                    fout.write(fileMessage.getBytes());
+    }
 
-                    System.out.println("Confrimate part: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
-                    oos.writeObject(new FileRequest(FileRequest.Command.LOCK_OFF));
-                    if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
-                        break;
-                    }
+    public void selectDiskAction(ActionEvent actionEvent) {
+        ComboBox<String> element = (ComboBox<String>) actionEvent.getSource();
+        updateListComputer(Paths.get(element.getSelectionModel().getSelectedItem()), filesListComputer);
+    }
+
+    public void buttonDownload(ActionEvent actionEvent) throws IOException{
+        if (socket != null) {
+            if (filesListServer.getSelectionModel().getSelectedItem() != null) {
+                Path pathToFile = Paths.get(pathField.getText() + "/" + filesListServer.getSelectionModel().getSelectedItem().getFilename());
+                if (!Files.exists(pathToFile)) {
+                    Files.createFile(pathToFile);
+                } else {
+                    Files.delete(pathToFile);
+                    Files.createFile(pathToFile);
                 }
-                fout.close();
-                System.out.println("Success");
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
+                oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
+                new Thread(() -> {
+                    try {
+                        FileOutputStream fout = new FileOutputStream(pathToFile.toFile());
+                        while (true) {
+                            Object msg = ois.readObject();
+                            FileMessage fileMessage = (FileMessage) msg;
+                            fout.write(fileMessage.getBytes());
+
+                            System.out.println("Confrimate part: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
+                            oos.writeObject(new FileRequest(FileRequest.Command.LOCK_OFF));
+                            if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
+                                break;
+                            }
+                        }
+                        fout.close();
+                        System.out.println("Success");
+                    } catch (IOException | ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    updateListComputer(Paths.get(pathField.getText()), filesListComputer);
+                }).start();
+            } else {
+                alertMessage("Не выбран файл для загрузки с сервера");
             }
-        }).start();
+        } else {
+            alertMessage("Вы не подключились к серверу");
+            visibleButtonAndPanel(false);
+        }
     }
 
     public void buttonUpload(ActionEvent actionEvent) throws IOException, InterruptedException, ClassNotFoundException {
@@ -217,53 +283,19 @@ public class Controller implements Initializable {
                     }
                 }
                 fis.close();
-                updateServerFileList();
+                updateListServer();
             } else System.out.println("Файл не выбран");
         } else {
-            Alert connect_server = new Alert(Alert.AlertType.INFORMATION);
-            connect_server.setTitle("Server connection");
-            connect_server.setHeaderText(null);
-            connect_server.setContentText("Вы не подключились к серверу");
-            connect_server.showAndWait();
+            alertMessage("Вы не подключились к серверу");
+            visibleButtonAndPanel(false);
         }
     }
 
-    private void updateServerFileList() throws IOException, ClassNotFoundException {
-        filesListServer.getItems().clear();
-        oos.writeObject(new FileRequest(FileRequest.Command.INFO));
-        FileRequest fileRequest = (FileRequest) ois.readObject();
-        if (fileRequest.getCommand() == FileRequest.Command.CONFIRMATE) {
-            System.out.println("Сервер подтвердил передачу списка файлов");
-            Object msg = ois.readObject();
-            List<FileInfo> fileInfoList = ((FileMessage) msg).getFileInfoList();
-            System.out.println("Получен список");
-            filesListServer.getItems().addAll(fileInfoList);
-            filesListServer.setCellFactory(new Callback<ListView<FileInfo>, ListCell<FileInfo>>() {
-                @Override
-                public ListCell<FileInfo> call(ListView<FileInfo> param) {
-                    return new ListCell<FileInfo>() {
-                        @Override
-                        protected void updateItem(FileInfo item, boolean empty) {
-                            super.updateItem(item, empty);
-                            if (item == null || empty) {
-                                setText(null);
-                                setStyle("");
-                            } else {
-                                String formattedFilename = String.format("%-30s", item.getFilename());
-                                String formattedFileSize = String.format("%,d bytes", item.getSize());
-                                if (item.getSize() == -1L) {
-                                    formattedFileSize = String.format("%s", "[DIR]");
-                                }
-                                if (item.getSize() == -2L) {
-                                    formattedFileSize = "";
-                                }
-                                String text = String.format("%s %-20s", formattedFilename, formattedFileSize);
-                                setText(text);
-                            }
-                        }
-                    };
-                }
-            });
-        }
+    public void alertMessage(String msg){
+        Alert connect_server = new Alert(Alert.AlertType.INFORMATION);
+        connect_server.setTitle("Server connection");
+        connect_server.setHeaderText(null);
+        connect_server.setContentText(msg);
+        connect_server.showAndWait();
     }
 }

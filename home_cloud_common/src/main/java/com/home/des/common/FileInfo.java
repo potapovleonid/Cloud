@@ -4,24 +4,42 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 public class FileInfo implements Serializable {
+    public enum FileType {
+        File("F"), DIRECTORY("DIR");
+
+        private String name;
+
+        public String getName(){
+            return name;
+        }
+
+        FileType(String name){
+            this.name = name;
+        }
+    }
+
     public static String UP_PATH = "[..]";
 
     private String filename;
     private long size;
+    private FileType fileType;
+    private LocalDateTime lastModified;
 
     public FileInfo(Path path){
         try {
             this.filename = path.getFileName().toString();
-            if (Files.isDirectory(path)){
-                this.size = -1;
-            } else {
-                this.size = Files.size(path);
-            }
+            this.size = Files.size(path);
+            this.fileType = Files.isDirectory(path) ? FileType.DIRECTORY : FileType.File;
+            if (this.fileType == FileType.DIRECTORY) size = -1;
+            this.lastModified = LocalDateTime.ofInstant(Files.getLastModifiedTime(path).toInstant(), ZoneOffset.ofHours(0));
         } catch (IOException e) {
-            throw new RuntimeException("Ошибка с файлом: " + path.toAbsolutePath().toString());
+            throw new RuntimeException("Unable to create file info from path");
         }
+
     }
 
     public FileInfo(String filename, long size){
@@ -47,5 +65,21 @@ public class FileInfo implements Serializable {
 
     public void setSize(long size) {
         this.size = size;
+    }
+
+    public FileType getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(FileType fileType) {
+        this.fileType = fileType;
+    }
+
+    public LocalDateTime getLastModified() {
+        return lastModified;
+    }
+
+    public void setLastModified(LocalDateTime lastModified) {
+        this.lastModified = lastModified;
     }
 }

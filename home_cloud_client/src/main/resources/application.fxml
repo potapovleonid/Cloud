@@ -5,32 +5,39 @@
 <?import javafx.scene.layout.*?>
 
 <HBox alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.home.des.client.Controller" stylesheets="application.css">
+      fx:controller="com.home.des.client.Controller">
         <VBox HBox.hgrow="ALWAYS">
             <MenuBar>
                 <Menu text="File">
                     <MenuItem text="Exit" onAction="#menuItemFileExit"/>
                 </Menu>
             </MenuBar>
-
-            <TextField fx:id="pathField" editable="false" focusTraversable="false"/>
-            <ListView VBox.vgrow="ALWAYS" fx:id="filesListComputer" onMouseClicked="#filesListComputerClicked">
-            </ListView>
+            <HBox VBox.vgrow="ALWAYS">
+                <VBox HBox.hgrow="ALWAYS">
+                    <HBox>
+                        <ComboBox fx:id="disksBox" onAction="#selectDiskAction"/>
+                        <TextField fx:id="pathField" editable="false" focusTraversable="false" HBox.hgrow="ALWAYS"/>
+                        <Button text="Up" onAction="#buttonUp"/>
+                    </HBox>
+                    <TableView fx:id="filesListComputer" VBox.vgrow="ALWAYS">
+                    </TableView>
+                </VBox>
+                <VBox fx:id="vBoxFileServer" HBox.hgrow="ALWAYS" visible="false" managed="false">
+                    <TableView fx:id="filesListServer" VBox.vgrow="ALWAYS">
+                    </TableView>
+                </VBox>
+            </HBox>
             <HBox spacing="5.0">
-                <Button maxWidth="Infinity" text="Copy" HBox.hgrow="ALWAYS"/>
-                <Button maxWidth="Infinity" text="Move" HBox.hgrow="ALWAYS"/>
-                <Button maxWidth="Infinity" text="Delete" HBox.hgrow="ALWAYS"/>
-                <Button fx:id="bUpload" maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS" onAction="#buttonUpload" visible="false"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Copy" HBox.hgrow="ALWAYS"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Move" HBox.hgrow="ALWAYS"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Delete" HBox.hgrow="ALWAYS"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" onAction="#buttonUpdateFileList"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS" fx:id="bUpload" onAction="#buttonUpload" visible="false" managed="false"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" fx:id="bDownload" onAction="#buttonDownload" visible="false" managed="false"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Connect" HBox.hgrow="ALWAYS" fx:id="bConnect" onAction="#connect_server"/>
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>
             </HBox>
-        </VBox>
-        <VBox HBox.hgrow="ALWAYS">
-            <ListView VBox.vgrow="ALWAYS" fx:id="filesListServer" onMouseClicked="#filesListComputerClicked">
-            </ListView>
-            <Button fx:id="bDownload" maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" onAction="#buttonDownload" visible="false"/>
-            <Button maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" onAction="#buttonUpdateFileList"/>
-            <Button maxWidth="Infinity" text="Connect" HBox.hgrow="ALWAYS" onAction="#connect_server"/>
         </VBox>
 </HBox>
