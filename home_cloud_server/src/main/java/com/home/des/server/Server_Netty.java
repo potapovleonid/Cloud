@@ -40,7 +40,8 @@ public class Server_Netty {
                 Files.createDirectory(ConnectionSettings.destination_server_files);
             }
             System.out.println("Server started");
-
+            JDBC_Connect.connectJDBC();
+            System.out.println("Connect database");
             future.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();

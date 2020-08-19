@@ -1,9 +1,6 @@
 package com.home.des.server;
 
-import com.home.des.common.ConnectionSettings;
-import com.home.des.common.FileInfo;
-import com.home.des.common.FileMessage;
-import com.home.des.common.FileRequest;
+import com.home.des.common.*;
 import io.netty.channel.*;
 
 import java.io.*;
@@ -14,8 +11,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 public class MyHandler extends ChannelInboundHandlerAdapter {
@@ -24,6 +19,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
     private int uploadPart = 0;
     private FileOutputStream uploadFileStream;
     private Path pathUploadFile;
+    private Path rootDirectory;
 
 
     public MyHandler() {
@@ -48,7 +44,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                 System.out.println("Получено сообщение на скачивание: " + ((FileRequest) msg).getFileName());
                 new Thread(() -> {
                     try {
-                        File fileDownload = new File(ConnectionSettings.destination_server_files.toString() + "/" + ((FileRequest) msg).getFileName());
+                        File fileDownload = new File(rootDirectory.toString() + "/" + ((FileRequest) msg).getFileName());
                         int totalParts = new Long(fileDownload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
                         if (fileDownload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) {
                             totalParts++;
@@ -80,7 +76,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                 }).start();
             }
             if (((FileRequest) msg).getCommand() == FileRequest.Command.UPLOAD) {
-                pathUploadFile = Paths.get(ConnectionSettings.destination_server_files.toString() + "/" + ((FileRequest) msg).getFileName());
+                pathUploadFile = Paths.get(rootDirectory.toString() + "/" + ((FileRequest) msg).getFileName());
                 if (!Files.exists(pathUploadFile)) {
                     Files.createFile(pathUploadFile);
                 } else {
@@ -95,7 +91,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                 executorService.execute(() -> {
                     ctx.writeAndFlush(new FileRequest(FileRequest.Command.CONFIRMATE));
                     try {
-                        List<FileInfo> infoList = Files.list(ConnectionSettings.destination_server_files).map(FileInfo::new).collect(Collectors.toList());
+                        List<FileInfo> infoList = Files.list(rootDirectory).map(FileInfo::new).collect(Collectors.toList());
                         ctx.writeAndFlush(new FileMessage(infoList));
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -122,6 +118,34 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                     uploadPart++;
                 }
             }
+        }
+        if (msg instanceof SQLMessage) {
+            SQLMessage user_sql_request = (SQLMessage) msg;
+            switch (user_sql_request.getCommand()) {
+                case AUTHORIZE:
+                    if (JDBC_Connect.isRegisteredUser(user_sql_request.getLoginName(), user_sql_request.getPassword())) {
+                        rootDirectory = Paths.get(ConnectionSettings.destination_server_files + "/" + user_sql_request.getLoginName());
+                        System.out.println(rootDirectory.toString());
+                        if (!Files.exists(rootDirectory)){
+                            Files.createDirectory(rootDirectory);
+                        }
+                        ctx.writeAndFlush(new FileRequest(FileRequest.Command.SUCCESS_AUTORIZE));
+                    } else {
+                        ctx.writeAndFlush(new FileRequest(FileRequest.Command.FALSE_AUTORIZE));
+                    }
+                    break;
+                case REGISTER:
+                    if (!JDBC_Connect.isRegisteredUser(user_sql_request.getLoginName(), user_sql_request.getPassword())){
+                        JDBC_Connect.registerNewUser(user_sql_request.getLoginName(), user_sql_request.getPassword());
+                        rootDirectory = Paths.get(ConnectionSettings.destination_server_files + "/" + user_sql_request.getLoginName());
+                        if (!Files.exists(rootDirectory)){
+                            Files.createDirectory(rootDirectory);
+                        }
+                        ctx.writeAndFlush(new FileRequest(FileRequest.Command.SUCCESS_REGISTER));
+                    } else ctx.writeAndFlush(new FileRequest(FileRequest.Command.FALSE_REGISTER));
+                    break;
+            }
+
         }
     }
 

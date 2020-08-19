@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<HBox alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1"
+<HBox fx:id="cloud_panel" alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.home.des.client.Controller">
         <VBox HBox.hgrow="ALWAYS">
             <MenuBar>
@@ -31,7 +31,7 @@
                 <Button focusTraversable="false" maxWidth="Infinity" text="Copy" HBox.hgrow="ALWAYS"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Move" HBox.hgrow="ALWAYS"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Delete" HBox.hgrow="ALWAYS"/>
-                <Button focusTraversable="false" maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" onAction="#buttonUpdateFileList"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" fx:id="bUpdate" onAction="#buttonUpdateFileList" visible="false" managed="false"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS" fx:id="bUpload" onAction="#buttonUpload" visible="false" managed="false"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" fx:id="bDownload" onAction="#buttonDownload" visible="false" managed="false"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Connect" HBox.hgrow="ALWAYS" fx:id="bConnect" onAction="#connect_server"/>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="registrationPanel" alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.home.des.client.ControllerRegistration">
+    <HBox>
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <TextField fx:id="loginField" text="Введите логин" HBox.hgrow="ALWAYS">
+            <VBox.margin>
+               <Insets left="5.0" right="5.0" top="5.0" />
+            </VBox.margin></TextField>
+            <TextField fx:id="passwordField" text="Введите пароль" HBox.hgrow="ALWAYS">
+            <VBox.margin>
+               <Insets bottom="5.0" left="5.0" right="5.0" />
+            </VBox.margin></TextField>
+        </VBox>
+        <VBox spacing="5">
+            <Button prefWidth="90.0" text="Регистрация" onAction="#bRegister">
+            <VBox.margin>
+               <Insets top="5.0" />
+            </VBox.margin></Button>
+            <Button onAction="#bAuthorize" prefWidth="90.0" text="Авторизация">
+            <VBox.margin>
+               <Insets right="5.0" />
+            </VBox.margin></Button>
+        </VBox>
+    </HBox>
+</VBox>

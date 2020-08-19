@@ -3,8 +3,6 @@ package com.home.des.common;
 import java.io.Serializable;
 import java.util.List;
 
-//будем кидаться классами внутри которых пакеты с данными, надобность в длинне файла отпадает
-//т.к. будет np и tp из них можно будет высчитать когда останавливаться
 public class FileMessage implements Serializable {
     public final static int SIZE_BYTE_BUFFER = 1024 * 1024 * 64;
 //    public final static int SIZE_BYTE_BUFFER = 1024 * 8;

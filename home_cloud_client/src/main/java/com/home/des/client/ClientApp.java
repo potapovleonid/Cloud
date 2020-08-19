@@ -10,9 +10,10 @@ public class ClientApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        Parent root = FXMLLoader.load(getClass().getResource("/application.fxml"));
+//        Parent root = FXMLLoader.load(getClass().getResource("/application.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("/registration.fxml"));
         primaryStage.setTitle("Home Cloud");
-        primaryStage.setScene(new Scene(root, 1200, 500));
+        primaryStage.setScene(new Scene(root, 400, 75));
         primaryStage.show();
     }
 
