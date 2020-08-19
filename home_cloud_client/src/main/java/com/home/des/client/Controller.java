@@ -310,8 +310,8 @@ public class Controller implements Initializable {
 
     public void setSocket(Socket socket) throws IOException, ClassNotFoundException {
         this.socket = socket;
-        oos = new ObjectEncoderOutputStream(socket.getOutputStream());
-        ois = new ObjectDecoderInputStream(socket.getInputStream());
+        ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
+        oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
         updateListServer();
         visibleButtonAndPanel(true);
     }
