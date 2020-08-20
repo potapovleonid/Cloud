@@ -4,6 +4,7 @@ import com.home.des.common.*;
 import io.netty.channel.*;
 
 import java.io.*;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,6 +21,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
     private FileOutputStream uploadFileStream;
     private Path pathUploadFile;
     private Path rootDirectory;
+    private String login_name;
 
 
     public MyHandler() {
@@ -33,7 +35,11 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("Client disconected");
+        if (login_name != null) {
+            System.out.println("Client disconected: " + login_name);
+        } else {
+            System.out.println("Client disconnected");
+        }
     }
 
     @Override
@@ -126,19 +132,20 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
                     if (JDBC_Connect.isRegisteredUser(user_sql_request.getLoginName(), user_sql_request.getPassword())) {
                         rootDirectory = Paths.get(ConnectionSettings.destination_server_files + "/" + user_sql_request.getLoginName());
                         System.out.println(rootDirectory.toString());
-                        if (!Files.exists(rootDirectory)){
+                        if (!Files.exists(rootDirectory)) {
                             Files.createDirectory(rootDirectory);
                         }
                         ctx.writeAndFlush(new FileRequest(FileRequest.Command.SUCCESS_AUTORIZE));
+                        login_name = user_sql_request.getLoginName();
                     } else {
                         ctx.writeAndFlush(new FileRequest(FileRequest.Command.FALSE_AUTORIZE));
                     }
                     break;
                 case REGISTER:
-                    if (!JDBC_Connect.isRegisteredUser(user_sql_request.getLoginName(), user_sql_request.getPassword())){
+                    if (!JDBC_Connect.isRegisteredUser(user_sql_request.getLoginName(), user_sql_request.getPassword())) {
                         JDBC_Connect.registerNewUser(user_sql_request.getLoginName(), user_sql_request.getPassword());
                         rootDirectory = Paths.get(ConnectionSettings.destination_server_files + "/" + user_sql_request.getLoginName());
-                        if (!Files.exists(rootDirectory)){
+                        if (!Files.exists(rootDirectory)) {
                             Files.createDirectory(rootDirectory);
                         }
                         ctx.writeAndFlush(new FileRequest(FileRequest.Command.SUCCESS_REGISTER));
