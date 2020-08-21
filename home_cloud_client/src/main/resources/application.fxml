@@ -22,7 +22,7 @@
                     <TableView fx:id="filesListComputer" VBox.vgrow="ALWAYS">
                     </TableView>
                 </VBox>
-                <VBox fx:id="vBoxFileServer" HBox.hgrow="ALWAYS" visible="false" managed="false">
+                <VBox fx:id="vBoxFileServer" HBox.hgrow="ALWAYS">
                     <TableView fx:id="filesListServer" VBox.vgrow="ALWAYS">
                     </TableView>
                 </VBox>
@@ -31,10 +31,8 @@
                 <Button focusTraversable="false" maxWidth="Infinity" text="Copy" HBox.hgrow="ALWAYS"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Move" HBox.hgrow="ALWAYS"/>
                 <Button focusTraversable="false" maxWidth="Infinity" text="Delete" HBox.hgrow="ALWAYS"/>
-                <Button focusTraversable="false" maxWidth="Infinity" text="UpdateServerFiles" HBox.hgrow="ALWAYS" fx:id="bUpdate" onAction="#buttonUpdateFileList" visible="false" managed="false"/>
-                <Button focusTraversable="false" maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS" fx:id="bUpload" onAction="#buttonUpload" visible="false" managed="false"/>
-                <Button focusTraversable="false" maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" fx:id="bDownload" onAction="#buttonDownload" visible="false" managed="false"/>
-                <Button focusTraversable="false" maxWidth="Infinity" text="Connect" HBox.hgrow="ALWAYS" fx:id="bConnect" onAction="#connect_server"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Upload" HBox.hgrow="ALWAYS" fx:id="bUpload" onAction="#buttonUpload"/>
+                <Button focusTraversable="false" maxWidth="Infinity" text="Download" HBox.hgrow="ALWAYS" fx:id="bDownload" onAction="#buttonDownload"/>
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>

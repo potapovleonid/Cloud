@@ -34,6 +34,7 @@ public class Controller implements Initializable {
     private ObjectEncoderOutputStream oos;
     private Socket socket;
     private Stage registerStage;
+    private Stage cloudStage;
     @FXML
     Button bUpload;
     @FXML
@@ -54,9 +55,6 @@ public class Controller implements Initializable {
     VBox vBoxFileServer;
     @FXML
     HBox cloud_panel;
-
-    public Controller() throws IOException {
-    }
 
     public void settingTable(TableView<FileInfo> tableView) {
         TableColumn<FileInfo, String> fileTypeColumn = new TableColumn<>();
@@ -121,7 +119,6 @@ public class Controller implements Initializable {
                 }
             }
         });
-
         updateListComputer(Paths.get(""), filesListComputer);
     }
 
@@ -140,10 +137,10 @@ public class Controller implements Initializable {
     public void updateListServer() throws IOException, ClassNotFoundException {
         filesListServer.getItems().clear();
         try {
-        oos.writeObject(new FileRequest(FileRequest.Command.INFO));
+            oos.writeObject(new FileRequest(FileRequest.Command.INFO));
         } catch (IOException e) {
-            alertMessage("Вы были отключены от сервера, пожалуйста переподключитесь");
-            visibleButtonAndPanel(false);
+            alertMessage(Alert.AlertType.ERROR, "Подключение к серверу отсутствует", null, "Вы были отключены от сервера, пожалуйста переподключитесь");
+            reConnect();
         }
         FileRequest fileRequest = (FileRequest) ois.readObject();
         if (fileRequest.getCommand() == FileRequest.Command.CONFIRMATE) {
@@ -154,55 +151,13 @@ public class Controller implements Initializable {
                 System.out.println("Получен список");
                 filesListServer.getItems().addAll(fileInfoList);
             } catch (ClassNotFoundException | IOException e) {
-                Alert alert = new Alert(Alert.AlertType.WARNING, "Не удалось обновить список файлов сервера", ButtonType.OK);
-                alert.showAndWait();
+                alertMessage(Alert.AlertType.ERROR, "Обновление списка", null, "Не удалось обновить список файлов сервера");
             }
         }
     }
 
     public void menuItemFileExit(ActionEvent actionEvent) {
         Platform.exit();
-    }
-
-    public void visibleButtonAndPanel(boolean boo) {
-        if (boo) {
-            bConnect.setVisible(!boo);
-            bConnect.setManaged(!boo);
-        } else {
-            bConnect.setVisible(boo);
-            bConnect.setManaged(boo);
-            try {
-                oos.close();
-                ois.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        bUpload.setVisible(boo);
-        bUpload.setManaged(boo);
-        bDownload.setVisible(boo);
-        bDownload.setManaged(boo);
-        bUpdate.setVisible(boo);
-        bUpdate.setManaged(boo);
-        vBoxFileServer.setVisible(boo);
-        vBoxFileServer.setManaged(boo);
-    }
-
-    public void connect_server(ActionEvent actionEvent) {
-        try {
-            socket = new Socket(ConnectionSettings.HOST, ConnectionSettings.PORT);
-            this.ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
-            this.oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
-            System.out.println("success connection");
-            updateListServer();
-            visibleButtonAndPanel(true);
-        } catch (IOException | ClassNotFoundException e) {
-            alertMessage("Произошла ошибка подключения к серверу");
-        }
-    }
-
-    public void buttonUpdateFileList(ActionEvent actionEvent) throws IOException, ClassNotFoundException {
-        updateListServer();
     }
 
     public void buttonUp(ActionEvent actionEvent) {
@@ -229,8 +184,8 @@ public class Controller implements Initializable {
             try {
                 oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
             } catch (RuntimeException e) {
-                alertMessage("Вы были отключены от сервера, пожалуйста переподключитесь");
-                visibleButtonAndPanel(false);
+                alertMessage(Alert.AlertType.ERROR, "Подключение к серверу отсутствует", null, "Вы были отключены от сервера, пожалуйста переподключитесь");
+                reConnect();
             }
             new Thread(() -> {
                 try {
@@ -239,37 +194,35 @@ public class Controller implements Initializable {
                         Object msg = ois.readObject();
                         FileMessage fileMessage = (FileMessage) msg;
                         fout.write(fileMessage.getBytes());
-
-                        System.out.println("Confrimate part: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
+                        System.out.println("Подтверждён пакет: " + fileMessage.getNumberPart() + "/" + fileMessage.getTotalParts());
                         oos.writeObject(new FileRequest(FileRequest.Command.LOCK_OFF));
                         if (((FileMessage) msg).getNumberPart() == ((FileMessage) msg).getTotalParts()) {
                             break;
                         }
                     }
                     fout.close();
-                    System.out.println("Success");
+                    System.out.println("Файл: " + pathToFile.getFileName() + " успешно загружен с сервера");
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
                 updateListComputer(Paths.get(pathField.getText()), filesListComputer);
             }).start();
         } else {
-            alertMessage("Не выбран файл для загрузки с сервера");
+            alertMessage(Alert.AlertType.INFORMATION, "Не выбран файл", null, "Не выбран файл для загрузки с сервера");
         }
     }
 
     public void buttonUpload(ActionEvent actionEvent) throws IOException, InterruptedException, ClassNotFoundException {
         if (filesListComputer.getSelectionModel().getSelectedItem() != null) {
-            System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
             try {
+                System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
                 oos.writeObject(new FileRequest(filesListComputer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.UPLOAD));
             } catch (RuntimeException e) {
-                alertMessage("Вы были отключены от сервера, пожалуйста переподключитесь");
-                visibleButtonAndPanel(false);
+                e.printStackTrace();
+                reConnect();
             }
             File fileUpload = new File(pathField.getText() + "/"
                     + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
-            //            System.out.println(fileUpload.getAbsoluteFile());
             int totalParts = new Long(fileUpload.length() / FileMessage.SIZE_BYTE_BUFFER).intValue();
             if (fileUpload.length() % FileMessage.SIZE_BYTE_BUFFER != 0) totalParts++;
             FileMessage fileMessageOut = new FileMessage(new byte[FileMessage.SIZE_BYTE_BUFFER], 0, totalParts);
@@ -289,23 +242,27 @@ public class Controller implements Initializable {
                         if (next_file.getCommand() == FileRequest.Command.NEXT_FM) {
                             System.out.println("Отправляем следующий пакет");
                         }
-                        if (next_file.getCommand() == FileRequest.Command.AGAIN) {
-                            oos.writeObject(fileMessageOut);
-                        }
                     }
                 }
             }
             fis.close();
             updateListServer();
-        } else System.out.println("Файл не выбран");
+        } else {
+            alertMessage(Alert.AlertType.INFORMATION, "Не выбран файл", null, "Не выбран файл для загрузки на сервера");
+        }
     }
 
-    public void alertMessage(String msg) {
+    public void alertMessage(Alert.AlertType alertType, String titleText, String headerText, String message) {
         Alert connect_server = new Alert(Alert.AlertType.INFORMATION);
-        connect_server.setTitle("Server connection");
+        connect_server.setTitle(titleText);
         connect_server.setHeaderText(null);
-        connect_server.setContentText(msg);
+        connect_server.setContentText(message);
         connect_server.showAndWait();
+    }
+
+    public void reConnect() {
+        cloudStage.hide();
+        registerStage.show();
     }
 
     public void setSocket(Socket socket) throws IOException, ClassNotFoundException {
@@ -313,13 +270,12 @@ public class Controller implements Initializable {
         ois = new ObjectDecoderInputStream(socket.getInputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
         oos = new ObjectEncoderOutputStream(socket.getOutputStream(), (int) (FileMessage.SIZE_BYTE_BUFFER * 1.05));
         updateListServer();
-        visibleButtonAndPanel(true);
     }
 
     public void setRegisterStage(Stage registerStage) throws InterruptedException {
-        this.registerStage = registerStage;Stage cloudPanel = (Stage) cloud_panel.getScene().getWindow();
+        this.registerStage = registerStage;
+        cloudStage = (Stage) cloud_panel.getScene().getWindow();
     }
-
 
 
 }

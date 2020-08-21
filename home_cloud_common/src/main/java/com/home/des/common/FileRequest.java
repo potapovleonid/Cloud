@@ -5,7 +5,8 @@ import java.io.Serializable;
 //будем кидать в обе стороны, нужно подумать как реализовать запрос на INFO
 public class FileRequest implements Serializable {
     public enum Command {
-        DOWNLOAD, UPLOAD, INFO, CONFIRMATE, LOCK_OFF, NEXT_FM, AGAIN, SUCCESS_AUTORIZE, FALSE_AUTORIZE, SUCCESS_REGISTER, FALSE_REGISTER
+        DOWNLOAD, UPLOAD, INFO, CONFIRMATE, NEXT_FM, LOCK_OFF,
+        SUCCESS_AUTORIZE, FALSE_AUTORIZE, SUCCESS_REGISTER, FALSE_REGISTER
     }
 
     private String fileName;

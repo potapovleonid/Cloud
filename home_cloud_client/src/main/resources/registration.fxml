@@ -7,11 +7,11 @@
 <VBox fx:id="registrationPanel" alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.home.des.client.ControllerRegistration">
     <HBox>
         <VBox spacing="5" HBox.hgrow="ALWAYS">
-            <TextField fx:id="loginField" text="Введите логин" HBox.hgrow="ALWAYS">
+            <TextField fx:id="loginField" promptText="Введите логин" HBox.hgrow="ALWAYS">
             <VBox.margin>
                <Insets left="5.0" right="5.0" top="5.0" />
             </VBox.margin></TextField>
-            <TextField fx:id="passwordField" text="Введите пароль" HBox.hgrow="ALWAYS">
+            <TextField fx:id="passwordField" promptText="Введите пароль" HBox.hgrow="ALWAYS">
             <VBox.margin>
                <Insets bottom="5.0" left="5.0" right="5.0" />
             </VBox.margin></TextField>

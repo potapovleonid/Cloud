@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 public class MyHandler extends ChannelInboundHandlerAdapter {
     private ExecutorService executorService;
-    private boolean block = false;
+    private volatile boolean block = false;
     private int uploadPart = 0;
     private FileOutputStream uploadFileStream;
     private Path pathUploadFile;
@@ -45,7 +45,7 @@ public class MyHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
 
-        if (msg instanceof FileRequest) {
+        if (msg instanceof FileRequest && login_name != null) {
             if (((FileRequest) msg).getCommand() == FileRequest.Command.DOWNLOAD) {
                 System.out.println("Получено сообщение на скачивание: " + ((FileRequest) msg).getFileName());
                 new Thread(() -> {

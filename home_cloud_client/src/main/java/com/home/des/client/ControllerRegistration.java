@@ -53,7 +53,6 @@ public class ControllerRegistration implements Initializable {
             Object answerServer = ois.readObject();
             if (answerServer instanceof FileRequest) {
                 if (((FileRequest) answerServer).getCommand() == FileRequest.Command.SUCCESS_AUTORIZE) {
-                //Это всё делаем уже после успешной регистрации
                 registerStage = (Stage) registrationPanel.getScene().getWindow();
                 Stage cloudStage = new Stage();
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/application.fxml"));
@@ -70,7 +69,7 @@ public class ControllerRegistration implements Initializable {
                 }
             }
         } else {
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Введи логин и пороль предурок!", ButtonType.OK);
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Введи логин и пароль!", ButtonType.OK);
             alert.showAndWait();
         }
     }
@@ -82,7 +81,6 @@ public class ControllerRegistration implements Initializable {
             FileRequest fileRequest = (FileRequest) answerServer;
             switch (fileRequest.getCommand()){
                 case SUCCESS_REGISTER:
-
                     Alert alert = new Alert(Alert.AlertType.INFORMATION, "Учётная запись создана", ButtonType.OK);
                     alert.setHeaderText(null);
                     alert.showAndWait();
@@ -92,7 +90,7 @@ public class ControllerRegistration implements Initializable {
                     break;
             }
         } else {
-            new Alert(Alert.AlertType.WARNING, "Введи логин и пороль предурок!", ButtonType.OK).showAndWait();
+            new Alert(Alert.AlertType.WARNING, "Введи логин и пароль!", ButtonType.OK).showAndWait();
         }
     }
 }

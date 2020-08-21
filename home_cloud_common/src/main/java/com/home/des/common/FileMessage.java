@@ -12,7 +12,6 @@ public class FileMessage implements Serializable {
     private int totalParts;
 
     public FileMessage(byte[] bytes, int numberPart, int totalParts) {
-        this.bytes = new byte[SIZE_BYTE_BUFFER];
         this.bytes = bytes;
         this.numberPart = numberPart;
         this.totalParts = totalParts;
