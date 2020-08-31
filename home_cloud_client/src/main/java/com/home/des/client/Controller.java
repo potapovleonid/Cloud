@@ -174,18 +174,19 @@ public class Controller implements Initializable {
 
     public void buttonDownload(ActionEvent actionEvent) throws IOException {
         if (filesListServer.getSelectionModel().getSelectedItem() != null) {
+            try {
+                oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
+            } catch (IOException e) {
+                alertMessage(Alert.AlertType.ERROR, "Connection server",
+                        "Потеряно подключение к серверу", "Пожалуйста авторизуйтесь снова или перезапустите программу");
+                reConnect();
+            }
             Path pathToFile = Paths.get(pathField.getText() + "/" + filesListServer.getSelectionModel().getSelectedItem().getFilename());
             if (!Files.exists(pathToFile)) {
                 Files.createFile(pathToFile);
             } else {
                 Files.delete(pathToFile);
                 Files.createFile(pathToFile);
-            }
-            try {
-                oos.writeObject(new FileRequest(filesListServer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.DOWNLOAD));
-            } catch (RuntimeException e) {
-                alertMessage(Alert.AlertType.ERROR, "Подключение к серверу отсутствует", null, "Вы были отключены от сервера, пожалуйста переподключитесь");
-                reConnect();
             }
             new Thread(() -> {
                 try {
@@ -218,7 +219,8 @@ public class Controller implements Initializable {
                 System.out.println("Загружаем файл: " + filesListComputer.getSelectionModel().getSelectedItem().getFilename());
                 oos.writeObject(new FileRequest(filesListComputer.getSelectionModel().getSelectedItem().getFilename(), FileRequest.Command.UPLOAD));
             } catch (RuntimeException e) {
-                e.printStackTrace();
+                alertMessage(Alert.AlertType.ERROR, "Connection server",
+                        "Потеряно подключение к серверу", "Пожалуйста авторизуйтесь снова или перезапустите программу");
                 reConnect();
             }
             File fileUpload = new File(pathField.getText() + "/"
